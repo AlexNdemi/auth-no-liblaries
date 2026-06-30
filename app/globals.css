@@ -46,6 +46,31 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ==========================================
+     CUSTOM BRAND COLORS
+     ========================================== */
+  --color-brand-25: #F8F9FD;
+  --color-brand-50: #F0F4FA;
+  --color-brand-100: #E1E9F6;
+  --color-brand-200: #C3D3ED;
+  --color-brand-300: #A5BDE4;
+  --color-brand-400: #87A7DB;
+  --color-brand-500: #6991D2;
+  --color-brand-600: #4B76C9;
+  --color-brand-700: #3659B1;
+  --color-brand-800: #284189;
+  --color-brand-900: #1B2A61;
+  --color-brand-950: #111A3E;
+
+  /* ==========================================
+     DISCORD THEME COLORS
+     ========================================== */
+  --color-discord-gray: #36393f;
+  --color-discord-text: #dcddde;
+  --color-discord-brand-color:#5865f2;
+  --color-discord-timestamp: #72767d;
+  --color-discord-background:#36393f;
 }
 
 :root {
