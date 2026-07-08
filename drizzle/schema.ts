@@ -8,6 +8,7 @@ import {
   uuid,
   unique,
   integer,
+  index,
   jsonb // 💡 Tip: PostgreSQL works better with jsonb than raw json
 } from "drizzle-orm/pg-core"
 
@@ -36,6 +37,7 @@ export const oAuthProviderEnum = pgEnum("oauth_provides", oAuthProviders)
 export const UserTable = pgTable("users", {
   id: uuid().primaryKey().defaultRandom(),
   name: text().notNull(),
+  quotaLimit: integer("quotaLimit"),
   email: text().notNull().unique(),
   password: text(),
   salt: text(),
@@ -120,7 +122,11 @@ export const EventTable = pgTable(
     eventCategoryId:uuid()
       .notNull()
       .references(() => EventCategoryTable.id) // ✅ Now it works because EventCategoryTable is defined above!
-  }
+  },
+  (table) => [
+    // Standard index for fast time-based querying and sorting
+    index("events_created_at_idx").on(table.createdAt)
+  ]
 )
 
 // ==========================================

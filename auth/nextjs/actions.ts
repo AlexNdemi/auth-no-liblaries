@@ -64,6 +64,7 @@ export async function signUp(unsafeData: z.infer<typeof signUpSchema>) {
       .values({
         name: data.name,
         email: data.email,
+        quotaLimit:100,
         password: hashedPassword,
         salt,
       })

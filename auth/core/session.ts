@@ -28,11 +28,15 @@ export type Cookies = {
   delete: (key: string) => void
 }
 
-export function getUserFromSession(cookies: Pick<Cookies, "get">) {
+export async function getUserFromSession(
+  cookies: Pick<Cookies, "get">
+): Promise<UserSession | null> {
   const sessionId = cookies.get(COOKIE_SESSION_KEY)?.value
-  if (sessionId == null) return null
+  if (!sessionId){
+    return Promise.resolve(null)
+  }
 
-  return getUserSessionById(sessionId)
+  return await getUserSessionById(sessionId)
 }
 
 export async function updateUserSessionData(
@@ -94,12 +98,12 @@ function setCookie(sessionId: string, cookies: Pick<Cookies, "set">) {
   })
 }
 
-async function getUserSessionById(sessionId: string) {
+async function getUserSessionById(sessionId: string):Promise<UserSession | null> {
   const rawUser = await redisClient.get(`session:${sessionId}`)
-  if (rawUser == null) return null
+  if (rawUser == null) return Promise.resolve(null)
 
   const parsed = JSON.parse(rawUser);
   const { success, data: user } = sessionSchema.safeParse(parsed)
 
-  return success ? user : null
+  return success ? user : Promise.resolve(null)
 }

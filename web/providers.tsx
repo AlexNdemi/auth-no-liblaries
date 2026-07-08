@@ -1,29 +1,30 @@
 "use client"
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { httpBatchLink, createTRPCClient } from '@trpc/client';
+import React, { useState } from 'react';
+import { TRPCProvider } from '@/lib/trpc';
+import { AppRouter } from '@/trpc/server/routers/_app';
+import superjson from 'superjson'
 
-import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { HTTPException } from "hono/http-exception"
-import { PropsWithChildren, useState } from "react"
 
-export const Providers = ({ children }: PropsWithChildren) => {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        queryCache: new QueryCache({
-          onError: (err) => {
-            let errorMessage: string
-            if (err instanceof HTTPException) {
-              errorMessage = err.message
-            } else if (err instanceof Error) {
-              errorMessage = err.message
-            } else {
-              errorMessage = "An unknown error occurred."
-            }
-            // toast notify user, log as an example
-            console.log(errorMessage)
-          },
+export default function Provider({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient());
+  const [trpcClient] = useState(() =>
+    createTRPCClient<AppRouter>({
+      links: [
+        httpBatchLink({
+          url: 'http://localhost:3000/api/trpc',
+          transformer:superjson,
         }),
-      })
-  )
+      ],
+    }),
+  );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    </TRPCProvider>
+  );
 }
