@@ -4,7 +4,7 @@ import {
   updateUserSessionExpiration,
 } from "./auth/core/session"
 
-const privateRoutes = ["/private"]
+const privateRoutes = ["/private","/dashboard"]
 const adminRoutes = ["/admin"]
 
 export async function proxy(request: NextRequest) {
@@ -24,14 +24,22 @@ export async function proxy(request: NextRequest) {
 }
 
 async function middlewareAuth(request: NextRequest) {
-  if (privateRoutes.includes(request.nextUrl.pathname)) {
+  const { pathname } = request.nextUrl
+
+  // Check if current path matches or starts with any private route
+  const isPrivateRoute = privateRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+  
+  if (isPrivateRoute) {
     const user = await getUserFromSession(request.cookies)
     if (user == null) {
       return NextResponse.redirect(new URL("/sign-in", request.url))
     }
   }
 
-  if (adminRoutes.includes(request.nextUrl.pathname)) {
+  // Check if current path matches or starts with any admin route
+  const isAdminRoute = adminRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+
+  if (isAdminRoute) {
     const user = await getUserFromSession(request.cookies)
     if (user == null) {
       return NextResponse.redirect(new URL("/sign-in", request.url))
@@ -44,7 +52,6 @@ async function middlewareAuth(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
   ],
 }

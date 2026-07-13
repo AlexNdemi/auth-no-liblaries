@@ -63,6 +63,7 @@ function connectUserToAccount(
         .values({
           email: email,
           name: name,
+          quotaLimit: 100,
         })
         .returning({ id: UserTable.id, role: UserTable.role })
       user = newUser

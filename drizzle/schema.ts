@@ -125,7 +125,11 @@ export const EventTable = pgTable(
   },
   (table) => [
     // Standard index for fast time-based querying and sorting
-    index("events_created_at_idx").on(table.createdAt)
+    index("events_created_at_idx").on(table.createdAt),
+    index("events_category_id_created_at_idx").on(
+      table.eventCategoryId, 
+      table.createdAt
+    )
   ]
 )
 

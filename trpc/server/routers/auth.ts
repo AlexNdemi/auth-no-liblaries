@@ -21,6 +21,13 @@ export const authRouter = router({
         where: eq(UserTable.email, input.email),
       })
 
+      if (user && !user.password) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This account uses Google/GitHub login. Please sign in using your OAuth provider or register a password.",
+          })
+      }
+
       if (!user?.password || !user?.salt) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -48,50 +55,71 @@ export const authRouter = router({
     }),
 
   signUp: publicProcedure
-    .input(signUpSchema)
-    .mutation(async ({ ctx, input }) => {
-      const existingUser = await ctx.db.query.UserTable.findFirst({
-        where: eq(UserTable.email, input.email),
-      })
+  .input(signUpSchema)
+  .mutation(async ({ ctx, input }) => {
+    // 1. Fetch password/salt fields to check if it's an OAuth account
+    const existingUser = await ctx.db.query.UserTable.findFirst({
+      columns: { id: true, password: true, salt: true, role: true },
+      where: eq(UserTable.email, input.email),
+    })
 
-      if (existingUser != null) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "Account already exists for this email",
+    const salt = generateSalt()
+    const hashedPassword = await hashPassword(input.password, salt)
+    console.log("existingUser: ",existingUser)
+    console.log("338")
+    // 2. Scenario A: User exists but has NO password (signed up via OAuth)
+    if (existingUser && !existingUser.password) {
+      await ctx.db
+        .update(UserTable)
+        .set({
+          password: hashedPassword,
+          salt,
+          name: input.name, // Optionally update name if blank
         })
-      }
+        .where(eq(UserTable.id, existingUser.id))
 
-      try {
-        const salt = generateSalt()
-        const hashedPassword = await hashPassword(input.password, salt)
+      await createUserSession({ id: existingUser.id, role: existingUser.role }, ctx.cookieStore)
+      return { success: true, redirectTo: "/" }
+    }
 
-        const [user] = await ctx.db
-          .insert(UserTable)
-          .values({
-            name: input.name,
-            email: input.email,
-            quotaLimit: 100,
-            password: hashedPassword,
-            salt,
-          })
-          .returning({ id: UserTable.id, role: UserTable.role })
+    // 3. Scenario B: User exists AND already has a password set
+    if (existingUser && existingUser.password) {
+      console.log("existingUser: ",existingUser)
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Account already exists for this email*3",
+      })
+    }
 
-        if (user == null) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Unable to create account",
-          })
-        }
+    // 4. Scenario C: Completely new user
+    try {
+      const [newUser] = await ctx.db
+        .insert(UserTable)
+        .values({
+          name: input.name,
+          email: input.email,
+          quotaLimit: 100,
+          password: hashedPassword,
+          salt,
+        })
+        .returning({ id: UserTable.id, role: UserTable.role })
 
-        await createUserSession(user, ctx.cookieStore)
-        return { success: true, redirectTo: "/" }
-      } catch {
+      if (newUser == null) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Unable to create account",
         })
       }
-    }),
+
+      await createUserSession(newUser, ctx.cookieStore)
+      return { success: true, redirectTo: "/" }
+    } catch {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Unable to create account",
+      })
+    }
+  }),
 
   logOut: publicProcedure.mutation(async ({ ctx }) => {
     await removeUserFromSession(ctx.cookieStore)
